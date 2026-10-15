@@ -276,7 +276,7 @@ export function statusPage({ title, text }) {
       h("p", { class: "wordmark" }, "Crew."),
       h("h1", { class: "status__title" }, title),
       h("p", { class: "status__text" }, text),
-      h("a", { class: "btn btn--primary", href: "/channels/team", "data-link": "" }, "Zurück zu team"),
+      h("a", { class: "btn btn--primary", href: "/channels/team", "data-link": "" }, "Zurück zu Chat 1"),
     ),
   );
 }

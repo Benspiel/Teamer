@@ -93,7 +93,7 @@ export function openChannel({ channel, container, menuButton, onAuthError }) {
     class: "composer__input",
     rows: 1,
     maxlength: MAX_LENGTH,
-    placeholder: `Nachricht an #${channel.slug}`,
+    placeholder: `Nachricht an #${channel.title || channel.slug}`,
     autocomplete: "off",
     "aria-describedby": "composer-meta",
   });
@@ -106,13 +106,13 @@ export function openChannel({ channel, container, menuButton, onAuthError }) {
   const box = h("div", { class: "composer__box" }, input, sendButton);
   const meta = h("p", { id: "composer-meta", class: "composer__meta", hidden: true });
   const composer = h("form", { class: "composer", "aria-label": "Nachricht schreiben" },
-    h("label", { class: "visually-hidden", for: "composer-input" }, `Nachricht an #${channel.slug}`),
+    h("label", { class: "visually-hidden", for: "composer-input" }, `Nachricht an #${channel.title || channel.slug}`),
     box,
     meta,
   );
 
   container.replaceChildren(header, scroller, banner, composer);
-  document.title = `#${channel.slug} · Crew.`;
+  document.title = `#${channel.title || channel.slug} · Crew.`;
 
   // ------------------------------------------------------------- Helfer
   const isAtBottom = () =>

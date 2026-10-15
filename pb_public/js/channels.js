@@ -23,7 +23,7 @@ function notify(rec) {
   const author = rec.expand?.author?.name || "Jemand";
   const body = String(rec.body || "");
   try {
-    const n = new Notification(`#${channel.slug} · ${author}`, {
+    const n = new Notification(`#${channel.title || channel.slug} · ${author}`, {
       body: body.length > NOTIFY_MAX ? `${body.slice(0, NOTIFY_MAX)} …` : body,
       tag: rec.id,
       icon: "/favicon.svg",

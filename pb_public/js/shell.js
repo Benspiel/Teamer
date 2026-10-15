@@ -31,7 +31,7 @@ export function createShell() {
       "data-link": "",
     },
       h("span", { class: "channel-link__hash", "aria-hidden": "true" }, "#"),
-      h("span", { class: "channel-link__name" }, channel.slug),
+      h("span", { class: "channel-link__name" }, (channel.title || channel.slug)),
       dot,
     );
     channelLinks.set(channel.slug, { link, dot, channel });
@@ -40,7 +40,7 @@ export function createShell() {
 
   // Weitere Bereiche unter den Kanälen.
   const AREAS = [
-    ["damages", "/autoschaden", "Autoschaden", "car"],
+    ["damages", "/autoschaden", "Kfz-Meldungen", "car"],
     ["orders", "/bestellen", "Bestellen", "bag"],
   ];
   const areaLinks = new Map();
@@ -120,7 +120,7 @@ export function createShell() {
     for (const { dot, channel, link } of channelLinks.values()) {
       const show = hasUnread(channel.id) && channel.slug !== activeSlug;
       dot.hidden = !show;
-      link.setAttribute("aria-label", show ? `#${channel.slug}, neue Nachrichten` : `#${channel.slug}`);
+      link.setAttribute("aria-label", show ? `#${channel.title || channel.slug}, neue Nachrichten` : `#${channel.title || channel.slug}`);
     }
   }
   const offUnread = onUnreadChange(renderUnread);

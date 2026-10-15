@@ -1,5 +1,5 @@
 /**
- * Autoschaden: Schäden mit Kennzeichen melden und als behoben markieren.
+ * Kfz-Meldungen: Schäden mit Kennzeichen melden und als behoben markieren.
  *
  * Nutzer sehen nur ihre eigenen Meldungen, Admins sehen alle (API-Rules).
  * "behoben" dürfen Melder und Admins setzen; wer/wann setzt der Server.
@@ -35,12 +35,12 @@ export function openDamages({ container, menuButton, onAuthError }) {
     plate.input.value = plate.input.value.trim().replace(/\s+/g, " ").toUpperCase();
   });
   const description = field({
-    label: "Schaden",
+    label: "Meldung",
     multiline: true,
     maxlength: MAX_DESCRIPTION,
-    placeholder: "Was ist passiert, wo am Fahrzeug?",
+    placeholder: "Text eingeben",
   });
-  const submit = h("button", { class: "btn btn--primary", type: "submit" }, "Schaden melden");
+  const submit = h("button", { class: "btn btn--primary", type: "submit" }, "Absenden");
   const form = h("form", { class: "form", novalidate: true },
     plate.wrap, description.wrap, h("div", { class: "form__actions" }, submit));
 
@@ -49,7 +49,7 @@ export function openDamages({ container, menuButton, onAuthError }) {
     const plateValue = plate.input.value.trim().replace(/\s+/g, " ").toUpperCase();
     const text = description.input.value.trim();
     plate.fail(plateValue ? null : "Bitte gib das Kennzeichen ein.");
-    description.fail(text ? null : "Bitte beschreib den Schaden.");
+    description.fail(text ? null : "Bitte gib einen Text ein.");
     const invalid = form.querySelector('[aria-invalid="true"]');
     if (invalid) return invalid.focus();
 
@@ -59,12 +59,12 @@ export function openDamages({ container, menuButton, onAuthError }) {
       await pb.collection("damages").create({ reporter: user.id, plate: plateValue, description: text });
       if (destroyed) return;
       form.reset();
-      toast("Schaden gemeldet.");
+      toast("Meldung abgeschickt.");
       setFilter("open");
       await load();
       plate.input.focus();
     } catch (err) {
-      handleError(err, "Der Schaden konnte nicht gemeldet werden.");
+      handleError(err, "Die Meldung konnte nicht abgeschickt werden.");
     } finally {
       if (!destroyed) {
         submit.disabled = false;
@@ -157,16 +157,16 @@ export function openDamages({ container, menuButton, onAuthError }) {
     }
   }
 
-  const createSection = section("Schaden melden", "Kennzeichen und kurze Beschreibung genügen.", form);
+  const createSection = section("Kfz-Meldung", "Kennzeichen und kurzer Text genügen.", form);
   const listSection = section(isAdmin ? "Alle Schäden" : "Meine Schäden", null,
     filterControl.wrap, empty, list);
 
   renderPage({
     container,
     menuButton,
-    title: "Autoschaden.",
+    title: "Kfz-Meldungen.",
     description: isAdmin ? "Alle gemeldeten Schäden im Blick." : "Melde Schäden und sieh, ob sie behoben sind.",
-    docTitle: "Autoschaden",
+    docTitle: "Kfz-Meldungen",
     content: [createSection.el, listSection.el],
   });
 
