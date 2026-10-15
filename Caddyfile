@@ -4,22 +4,33 @@
 # ACME_EMAIL        Kontakt für Let's Encrypt
 # ADMIN_ALLOWED_IPS IPs/Netze, die das Dashboard /_/ erreichen dürfen
 #                   (Standard: private_ranges = nur LAN/VPN)
+# SITE_ADDRESSES    Adressen, unter denen Caddy antwortet (Standard: DOMAIN).
+#                   Cloudflare Tunnel: "http://chat.example.de, 100.x.y.z"
+# DEFAULT_SNI       Zertifikat für Aufrufe per IP (Standard: DOMAIN)
 {
 	email {$ACME_EMAIL}
 	# Browser senden bei IP-Adressen keinen Servernamen (SNI) mit.
 	# Ohne diese Zeile findet Caddy dann kein Zertifikat (z. B. Safari:
 	# "keine sichere Verbindung"). Für echte Domains ohne Wirkung.
-	default_sni {$DOMAIN}
+	default_sni {$DEFAULT_SNI}
+
+	servers {
+		# Echte Besucher-IP hinter Cloudflare Tunnel: cloudflared läuft auf dem
+		# Host und erreicht Caddy über Loopback bzw. das Docker-Netz. Nur von
+		# dort wird Cf-Connecting-IP geglaubt – nicht von LAN- oder Internet-Clients.
+		trusted_proxies static 127.0.0.0/8 ::1 172.16.0.0/12
+		client_ip_headers Cf-Connecting-IP
+	}
 }
 
-{$DOMAIN} {
+{$SITE_ADDRESSES} {
 	encode zstd gzip
 
 	# --- Dashboard nur aus erlaubten Netzen ------------------------------
 	@dashboard path /_ /_/*
 	@dashboardBlocked {
 		path /_ /_/*
-		not remote_ip {$ADMIN_ALLOWED_IPS:private_ranges}
+		not client_ip {$ADMIN_ALLOWED_IPS:private_ranges}
 	}
 	respond @dashboardBlocked "Not found" 404
 
@@ -59,5 +70,8 @@
 	reverse_proxy pocketbase:8090 {
 		# Realtime (SSE) sofort durchreichen.
 		flush_interval -1
+		# PocketBase bekommt genau eine, von Caddy ermittelte Client-IP
+		# (Grundlage für Rate-Limits).
+		header_up X-Forwarded-For {client_ip}
 	}
 }

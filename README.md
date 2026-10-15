@@ -293,6 +293,37 @@ kann PocketBase deshalb nicht löschen („part of a required relation reference
 
 ---
 
+## Betrieb mit Cloudflare Tunnel
+
+Mit Cloudflare Tunnel ist der Chat über eine Domain erreichbar, **ohne Portfreigabe im
+Router**. Cloudflare übernimmt das HTTPS-Zertifikat, `cloudflared` läuft in der CT und
+leitet an Caddy weiter.
+
+1. `cloudflared` in der CT installieren und mit dem Token aus dem Cloudflare-Dashboard
+   als Dienst einrichten (`cloudflared service install <TOKEN>`).
+2. In der `.env`:
+   ```
+   DOMAIN=chat.example.com
+   SITE_ADDRESSES=http://chat.example.com, 100.99.251.25
+   DEFAULT_SNI=100.99.251.25
+   ```
+   Die IP ist optional, z. B. die Tailscale-IP der CT. Darüber erreichst du weiterhin das
+   Dashboard.
+3. `docker compose up -d`
+4. Im Cloudflare-Dashboard beim Tunnel einen **Public Hostname** anlegen:
+   Subdomain/Domain = `chat.example.com`, Service-Typ **HTTP**, URL **`localhost:80`**.
+
+Sicherheit im Tunnel-Modus:
+
+- Caddy glaubt den Header `Cf-Connecting-IP` nur Verbindungen von Loopback oder aus dem
+  Docker-Netz, also von `cloudflared` auf dem Host. Daraus ergibt sich die echte
+  Besucher-IP.
+- Die Dashboard-Sperre (`/_/`) und die Login-Rate-Limits arbeiten mit dieser echten IP.
+  Über die Domain ist das Dashboard aus dem Internet daher gesperrt (404).
+- Alle Security-Header (CSP usw.) setzt weiterhin Caddy.
+
+---
+
 ## Dashboard absichern
 
 Das Dashboard `/_/` ist im Betrieb nur über Caddy erreichbar und zusätzlich auf
