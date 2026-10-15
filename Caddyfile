@@ -6,6 +6,10 @@
 #                   (Standard: private_ranges = nur LAN/VPN)
 {
 	email {$ACME_EMAIL}
+	# Browser senden bei IP-Adressen keinen Servernamen (SNI) mit.
+	# Ohne diese Zeile findet Caddy dann kein Zertifikat (z. B. Safari:
+	# "keine sichere Verbindung"). Für echte Domains ohne Wirkung.
+	default_sni {$DOMAIN}
 }
 
 {$DOMAIN} {
