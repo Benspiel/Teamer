@@ -49,9 +49,12 @@
 		defer
 	}
 
-	# Statische App-Dateien kurz cachen, API nie.
-	@static path /css/* /js/* /fonts/* /favicon.svg
-	header @static Cache-Control "public, max-age=3600"
+	# App-Dateien immer beim Server nachfragen (304, wenn unverändert),
+	# damit Updates sofort ankommen. Die API wird ohnehin nicht gecacht.
+	@static not path /api/* /_ /_/* /fonts/*
+	header @static Cache-Control "no-cache"
+	@fonts path /fonts/*
+	header @fonts Cache-Control "public, max-age=604800"
 
 	reverse_proxy pocketbase:8090 {
 		# Realtime (SSE) sofort durchreichen.
