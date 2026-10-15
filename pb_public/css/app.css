@@ -1235,6 +1235,141 @@ img {
   line-height: var(--leading-body-sm);
 }
 
+/* --------------------------------------------------------------- Benutzer */
+
+.field__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.field__row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.badge--inverse {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.users-result:empty {
+  display: none;
+}
+
+.credentials {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--r-md);
+  background: var(--canvas-soft);
+}
+
+.credentials__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-body);
+}
+
+.credentials__hint {
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-body-sm);
+}
+
+.credentials__secret {
+  user-select: all;
+}
+
+.credentials__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.user-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--canvas-soft);
+}
+
+.user-row__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.user-row__text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.user-row__name {
+  overflow: hidden;
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-row__email {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-row__badges {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.user-row .badge {
+  background: var(--canvas);
+}
+
+.user-row .badge--inverse {
+  background: var(--ink);
+}
+
+.user-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.user-row__actions .btn--soft {
+  background: var(--canvas);
+}
+
+.user-row__actions .btn--soft:hover:not(:disabled) {
+  background: var(--field);
+}
+
+.user-row.is-blocked .user-row__text,
+.user-row.is-blocked .avatar {
+  opacity: var(--opacity-hover-soft);
+}
+
 /* ------------------------------------------------------------------- Toast */
 
 .toasts {
@@ -1368,6 +1503,10 @@ img {
 @media (max-width: 599px) {
   .settings-section {
     padding: var(--space-4);
+  }
+
+  .user-row__who {
+    flex-wrap: wrap;
   }
 
   .auth-page {

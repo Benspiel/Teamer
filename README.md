@@ -55,7 +55,8 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
 ├─ pb_migrations/
 │  ├─ 1760500000_crew_schema.js         Collections + API-Rules
 │  ├─ 1760500001_crew_seed_channels.js  team, peam, beam
-│  └─ 1760500002_crew_settings.js       Rate-Limits, Trusted Proxy, App-Name
+│  ├─ 1760500002_crew_settings.js       Rate-Limits, Trusted Proxy, App-Name
+│  └─ 1760500003_crew_admin_users.js    Benutzerverwaltung für Admins
 ├─ pb_hooks/crew.pb.js      Default-Rolle, Sperre beendet Sitzungen, Text trimmen
 ├─ pb_public/
 │  ├─ index.html
@@ -67,6 +68,7 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
 │  │  ├─ auth.js            Login-Seite, Session prüfen, Abmelden
 │  │  ├─ shell.js           Sidebar, Off-Canvas-Menü
 │  │  ├─ settings.js        Einstellungen (Profil, Passwort, Darstellung, Chat)
+│  │  ├─ users.js           Benutzerverwaltung für Admins
 │  │  ├─ prefs.js           Geräte-Einstellungen (Theme, Enter, Benachrichtigungen)
 │  │  ├─ theme.js           setzt das Farbschema vor dem ersten Rendern
 │  │  ├─ channels.js        Kanäle, Lesestatus, Ungelesen-Punkte
@@ -178,7 +180,7 @@ Die `.env` steht in `.gitignore` und gehört nie ins Repository.
 
 ## Benutzerverwaltung
 
-Es gibt **keine öffentliche Registrierung**. Konten legt ein Superuser an.
+Es gibt **keine öffentliche Registrierung**. Konten legt ein Admin in der App oder ein Superuser im Dashboard an.
 
 ### Superuser anlegen
 
@@ -193,6 +195,21 @@ docker compose run --rm pocketbase superuser upsert admin@example.com 'langes-pa
 
 ### Teammitglied anlegen
 
+**In der App (empfohlen):** Wer die Rolle `admin` hat, sieht in der Sidebar über dem eigenen
+Konto den Bereich **Benutzer** (`/users`). Dort:
+
+- **Neues Konto:** Name, E-Mail, Startpasswort (wird zufällig erzeugt, mindestens 10 Zeichen)
+  und Rolle eingeben. Nach dem Anlegen werden die Zugangsdaten **einmal** angezeigt, mit
+  Kopieren-Button zum Weitergeben.
+- **Alle Konten:** Übersicht mit E-Mail, Rolle und Status. Pro Konto gibt es
+  **Passwort neu** (setzt ein neues Zufallspasswort und zeigt es an), **Zum Admin** bzw.
+  **Zum Mitglied** und **Sperren** bzw. **Entsperren**. Jede Aktion fragt einmal nach
+  („Wirklich …?“).
+- Das eigene Konto lässt sich dort nicht ändern (kein Selbst-Sperren oder -Herabstufen).
+  Das eigene Passwort ändert man in den Einstellungen.
+
+Den **ersten Admin** legst du im Dashboard an (oder per Skript mit Rolle `admin`).
+
 **Im Dashboard** (`https://DOMAIN/_/` bzw. per SSH-Tunnel, siehe unten):
 
 1. Als Superuser anmelden.
@@ -201,7 +218,7 @@ docker compose run --rm pocketbase superuser upsert admin@example.com 'langes-pa
 4. `role`: `member` (Standard, wird bei leerem Feld automatisch gesetzt) oder `admin`.
 5. `verified` aktivieren und speichern.
 
-`admin` darf zusätzlich fremde Nachrichten löschen. Alles andere ist für beide Rollen gleich.
+`admin` darf zusätzlich fremde Nachrichten löschen und Konten verwalten (siehe oben).
 
 **Per Skript** (Node ≥ 18, nutzt die REST-API mit Superuser-Login; legt an oder
 aktualisiert, falls die E-Mail schon existiert):
@@ -222,7 +239,8 @@ PB_URL=http://127.0.0.1:8090 SU_EMAIL=admin@example.com SU_PASSWORD='…' \
 
 ### Konto sperren
 
-Dashboard → Collections → users → Konto öffnen → Feld **blocked** aktivieren → speichern.
+In der App unter **Benutzer → Sperren** (als Admin) oder im Dashboard → Collections → users →
+Konto öffnen → Feld **blocked** aktivieren → speichern.
 
 - Login ist sofort nicht mehr möglich (`authRule: blocked = false`).
 - Ein Hook erneuert den Token-Schlüssel des Kontos. Damit werden alle offenen Sitzungen
@@ -230,7 +248,7 @@ Dashboard → Collections → users → Konto öffnen → Feld **blocked** aktiv
   das bei der nächsten Aktion und zeigt die Login-Seite.
 - Entsperren: Häkchen wieder entfernen.
 
-Das Feld `blocked` ist für normale Nutzer unsichtbar und nicht änderbar.
+Mitglieder können das Feld `blocked` nicht ändern, auch nicht beim eigenen Konto.
 
 ### Konto löschen
 
@@ -308,7 +326,7 @@ lassen sich verschlüsselte Einstellungen nicht mehr lesen.
 
 | Collection | Felder |
 |---|---|
-| `users` (Auth) | `email`, `password` (min. 10), `name` (Pflicht, max. 80), `avatar` (Bild, max. 2 MB, Thumbs 72×72/144×144), `role` (`admin`/`member`), `blocked` (versteckt) |
+| `users` (Auth) | `email`, `password` (min. 10), `name` (Pflicht, max. 80), `avatar` (Bild, max. 2 MB, Thumbs 72×72/144×144), `role` (`admin`/`member`), `blocked` |
 | `channels` | `slug` (unique, nur `team`/`peam`/`beam`), `title`, `description`, `position` |
 | `messages` | `channel` → channels (Pflicht, kein Cascade), `author` → users (Pflicht), `body` (1–4000), `created`, `updated`; Index `(channel, created)` |
 | `channel_reads` | `user` → users, `channel` → channels, `last_read` (Datum); Unique-Index `(user, channel)` |
@@ -317,12 +335,14 @@ lassen sich verschlüsselte Einstellungen nicht mehr lesen.
 
 | Collection | list / view | create | update | delete |
 |---|---|---|---|---|
-| users | `@request.auth.id != ""` | `null` | `id = @request.auth.id && @request.body.role:isset = false && @request.body.blocked:isset = false && @request.body.emailVisibility:isset = false` | `null` |
+| users | `@request.auth.id != ""` | `@request.auth.role = "admin"` | `(id = @request.auth.id && @request.body.role:isset = false && @request.body.blocked:isset = false && @request.body.emailVisibility:isset = false) \|\| (@request.auth.role = "admin" && id != @request.auth.id)` | `null` |
 | channels | `@request.auth.id != ""` | `null` | `null` | `null` |
 | messages | `@request.auth.id != ""` | `@request.auth.id != "" && @request.body.author = @request.auth.id` | `author = @request.auth.id && @request.body.author:isset = false && @request.body.channel:isset = false` | `author = @request.auth.id \|\| @request.auth.role = "admin"` |
 | channel_reads | `user = @request.auth.id` | `@request.auth.id != "" && @request.body.user = @request.auth.id` | `user = @request.auth.id && @request.body.user:isset = false && @request.body.channel:isset = false` | `user = @request.auth.id` |
 
-Zusätzlich gilt für `users`: `authRule = blocked = false` und `manageRule = null`. Nur
+Zusätzlich gilt für `users`: `authRule = blocked = false` und
+`manageRule = @request.auth.role = "admin" && id != @request.auth.id`. Admins dürfen also andere
+Konten verwalten (Passwort ohne altes Passwort setzen, E-Mail sehen), aber nicht sich selbst. Nur
 Passwort-Login ist aktiv (OAuth2, OTP und MFA sind aus). Die Realtime-Abos prüfen dieselben
 list/view-Rules: Ohne Login kommen keine Events an.
 

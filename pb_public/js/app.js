@@ -5,13 +5,14 @@
  * API-Rules von PocketBase (siehe pb_migrations/).
  */
 
-import { pb, isAuthed, statusOf, session } from "./pb.js";
+import { pb, me, isAuthed, statusOf, session } from "./pb.js";
 import { startRouter, navigate } from "./router.js";
 import { renderLogin, refreshSession, logout } from "./auth.js";
 import { statusPage } from "./ui.js";
 import { createShell } from "./shell.js";
 import { openChannel } from "./messages.js";
 import { openSettings } from "./settings.js";
+import { openUsers } from "./users.js";
 import "./prefs.js";
 import { startRealtime, stopRealtime, onReconnect } from "./realtime.js";
 import {
@@ -182,6 +183,31 @@ async function showSettings(token) {
   });
 }
 
+async function showUsers(token) {
+  if (me()?.role !== "admin") {
+    return navigate(`/channels/${DEFAULT_CHANNEL}`, { replace: true });
+  }
+  let s;
+  try {
+    s = await ensureShell();
+  } catch (err) {
+    if (token !== routeToken) return;
+    if (statusOf(err) === 401) return handleExpired();
+    await teardown();
+    return showStatus({
+      title: "Etwas ist schiefgelaufen.",
+      text: "Die Benutzer konnten nicht geladen werden. Prüf deine Verbindung und versuch es erneut.",
+    });
+  }
+  if (token !== routeToken) return;
+  await view?.destroy();
+  if (token !== routeToken) return;
+
+  setActiveChannel(null);
+  s.setActive("users");
+  view = openUsers({ container: s.main, menuButton: s.menuButton(), onAuthError: handleExpired });
+}
+
 // --------------------------------------------------------------- Routing
 
 async function route(path) {
@@ -203,6 +229,10 @@ async function route(path) {
 
   if (path === "/settings") {
     return showSettings(token);
+  }
+
+  if (path === "/users") {
+    return showUsers(token);
   }
 
   const match = path.match(/^\/channels\/([^/]+)$/);

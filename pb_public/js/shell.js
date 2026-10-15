@@ -56,11 +56,24 @@ export function createShell() {
   // --------------------------------------------------------- Nutzerbereich
   // Avatar + Name führen zu den Einstellungen (Profil, Passwort, Darstellung …).
   let settingsLink = null;
+  let usersLink = null;
 
   function renderUser() {
     const user = me();
     if (!user) return;
     const current = settingsLink?.getAttribute("aria-current");
+    const usersCurrent = usersLink?.getAttribute("aria-current");
+
+    // Nur für Admins: Benutzerverwaltung. Rechte prüft trotzdem der Server.
+    usersLink = null;
+    if (user.role === "admin") {
+      usersLink = h("a", { class: "channel-link", href: "/users", "data-link": "" },
+        h("span", { class: "channel-link__hash", "aria-hidden": "true" }, icon("users", { small: true })),
+        h("span", { class: "channel-link__name" }, "Benutzer"),
+      );
+      if (usersCurrent) usersLink.setAttribute("aria-current", usersCurrent);
+      usersLink.addEventListener("click", () => closeNav({ restoreFocus: false }));
+    }
     settingsLink = h("a", {
       class: "sidebar__me",
       href: "/settings",
@@ -78,7 +91,7 @@ export function createShell() {
     const logoutButton = h("button", { class: "btn btn--soft btn--block", type: "button" }, "Abmelden");
     logoutButton.addEventListener("click", () => logout());
 
-    userArea.replaceChildren(settingsLink, logoutButton);
+    userArea.replaceChildren(...[usersLink, settingsLink, logoutButton].filter(Boolean));
   }
 
   // Name/Profilbild geändert (auch in einem anderen Tab) → Sidebar aktualisieren.
@@ -160,12 +173,13 @@ export function createShell() {
     return btn;
   }
 
-  /** slug eines Kanals oder "settings". */
+  /** slug eines Kanals, "settings" oder "users". */
   function setActive(slug) {
     activeSlug = slug;
-    if (settingsLink) {
-      if (slug === "settings") settingsLink.setAttribute("aria-current", "page");
-      else settingsLink.removeAttribute("aria-current");
+    for (const [link, key] of [[settingsLink, "settings"], [usersLink, "users"]]) {
+      if (!link) continue;
+      if (slug === key) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
     }
     for (const [s, { link }] of channelLinks) {
       if (s === slug) link.setAttribute("aria-current", "page");

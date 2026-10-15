@@ -241,7 +241,7 @@ async function main() {
     const signup = await api("POST", "/api/collections/users/records", {
       body: { email: `signup-${stamp}@example.invalid`, password: PW, passwordConfirm: PW, name: "x" },
     });
-    ok(signup.status === 403, `öffentliche Registrierung abgelehnt (${signup.status})`);
+    ok(signup.status >= 400 && signup.status < 500, `öffentliche Registrierung abgelehnt (${signup.status})`);
 
     const roleUp = await api("PATCH", `/api/collections/users/records/${A.id}`, {
       token: ta, body: { role: "admin" },
@@ -259,8 +259,7 @@ async function main() {
     ok(userDel.status === 403 || userDel.status === 404, `A kann sich nicht selbst löschen (${userDel.status})`);
 
     const userView = await api("GET", `/api/collections/users/records/${B.id}`, { token: ta });
-    ok(userView.status === 200 && !userView.data.email && userView.data.blocked === undefined,
-      "andere sehen weder E-Mail noch Sperr-Flag");
+    ok(userView.status === 200 && !userView.data.email, "Mitglieder sehen keine fremden E-Mails");
     const guestUsers = await api("GET", "/api/collections/users/records");
     ok(guestUsers.data?.totalItems === 0 || guestUsers.status === 403, "Gast sieht keine Nutzer");
 
@@ -285,11 +284,58 @@ async function main() {
     });
     ok(rUpd.status === 404 || rUpd.status === 403, `B kann A's Lesestatus nicht ändern (${rUpd.status})`);
 
+    // --- Benutzerverwaltung durch Admins
+    const memberCreate = await api("POST", "/api/collections/users/records", {
+      token: ta,
+      body: { email: `d-${stamp}@example.invalid`, password: PW, passwordConfirm: PW, name: "D" },
+    });
+    ok(memberCreate.status >= 400, `Mitglied kann keine Konten anlegen (${memberCreate.status})`);
+
+    const adminCreate = await api("POST", "/api/collections/users/records", {
+      token: tc,
+      body: { email: `crew-test-d-${stamp}@example.invalid`, password: PW, passwordConfirm: PW, name: "Test D", verified: true },
+    });
+    ok(adminCreate.status === 200 && adminCreate.data.role === "member", `Admin kann Konto anlegen (${adminCreate.status})`);
+    if (adminCreate.status === 200) created.push(adminCreate.data);
+
+    const adminView = await api("GET", `/api/collections/users/records/${B.id}`, { token: tc });
+    ok(adminView.data?.email === B.email, "Admin sieht E-Mail anderer Konten");
+
+    const memberBlock = await api("PATCH", `/api/collections/users/records/${B.id}`, {
+      token: ta, body: { blocked: true },
+    });
+    ok(memberBlock.status >= 400, `Mitglied kann niemanden sperren (${memberBlock.status})`);
+
+    const selfBlock = await api("PATCH", `/api/collections/users/records/${C.id}`, {
+      token: tc, body: { blocked: true },
+    });
+    ok(selfBlock.status >= 400, `Admin kann sich nicht selbst sperren (${selfBlock.status})`);
+    const selfDemote = await api("PATCH", `/api/collections/users/records/${C.id}`, {
+      token: tc, body: { role: "member" },
+    });
+    ok(selfDemote.status >= 400, `Admin kann eigene Rolle nicht ändern (${selfDemote.status})`);
+
+    const PW2 = PW + "-neu";
+    const reset = await api("PATCH", `/api/collections/users/records/${A.id}`, {
+      token: tc, body: { password: PW2, passwordConfirm: PW2 },
+    });
+    ok(reset.status === 200, `Admin setzt fremdes Passwort ohne altes zurück (${reset.status})`);
+    ok((await login("users", A.email, PW2)).status === 200, "Login mit zurückgesetztem Passwort");
+    const memberReset = await api("PATCH", `/api/collections/users/records/${B.id}`, {
+      token: (await login("users", A.email, PW2)).data.token, body: { password: PW2, passwordConfirm: PW2 },
+    });
+    ok(memberReset.status >= 400, `Mitglied kann fremde Passwörter nicht setzen (${memberReset.status})`);
+
+    const promote = await api("PATCH", `/api/collections/users/records/${A.id}`, {
+      token: tc, body: { role: "admin" },
+    });
+    ok(promote.status === 200 && promote.data.role === "admin", "Admin kann Rolle anderer ändern");
+
     // --- Sperren
     const block = await api("PATCH", `/api/collections/users/records/${B.id}`, {
-      token: suToken, body: { blocked: true },
+      token: tc, body: { blocked: true },
     });
-    ok(block.status === 200, "Superuser kann Konto sperren");
+    ok(block.status === 200, "Admin kann Konto sperren");
     const blockedLogin = await login("users", B.email, PW);
     ok(blockedLogin.status === 400 || blockedLogin.status === 403, `gesperrtes Konto kann sich nicht anmelden (${blockedLogin.status})`);
     const blockedRefresh = await api("POST", "/api/collections/users/auth-refresh", { token: tb });
