@@ -38,6 +38,22 @@ export function createShell() {
     list.append(h("li", {}, link));
   }
 
+  // Weitere Bereiche unter den Kanälen.
+  const AREAS = [
+    ["damages", "/autoschaden", "Autoschaden", "car"],
+    ["orders", "/bestellen", "Bestellen", "bag"],
+  ];
+  const areaLinks = new Map();
+  const areaList = h("ul", { class: "channel-list", "aria-label": "Bereiche" });
+  for (const [key, href, label, iconName] of AREAS) {
+    const link = h("a", { class: "channel-link", href, "data-link": "" },
+      h("span", { class: "channel-link__hash", "aria-hidden": "true" }, icon(iconName, { small: true })),
+      h("span", { class: "channel-link__name" }, label),
+    );
+    areaLinks.set(key, link);
+    areaList.append(h("li", {}, link));
+  }
+
   const userArea = h("div", { class: "sidebar__user" });
 
   const sidebar = h("nav", { id: "sidebar", class: "sidebar", "aria-label": "Kanäle" },
@@ -45,7 +61,7 @@ export function createShell() {
       h("span", { class: "wordmark" }, "Crew."),
       closeButton,
     ),
-    list,
+    h("div", { class: "sidebar__nav" }, list, areaList),
     userArea,
   );
 
@@ -150,9 +166,11 @@ export function createShell() {
     }
   };
   document.addEventListener("keydown", onKeydown);
-  list.addEventListener("click", (event) => {
-    if (event.target.closest("a")) closeNav({ restoreFocus: false });
-  });
+  for (const nav of [list, areaList]) {
+    nav.addEventListener("click", (event) => {
+      if (event.target.closest("a")) closeNav({ restoreFocus: false });
+    });
+  }
   const onMediaChange = () => {
     if (!MOBILE.matches) root.classList.remove("is-nav-open");
     syncInert();
@@ -173,10 +191,10 @@ export function createShell() {
     return btn;
   }
 
-  /** slug eines Kanals, "settings" oder "users". */
+  /** slug eines Kanals oder "settings", "users", "damages", "orders". */
   function setActive(slug) {
     activeSlug = slug;
-    for (const [link, key] of [[settingsLink, "settings"], [usersLink, "users"]]) {
+    for (const [link, key] of [[settingsLink, "settings"], [usersLink, "users"], ...[...areaLinks].map(([k, l]) => [l, k])]) {
       if (!link) continue;
       if (slug === key) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");

@@ -56,7 +56,8 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
 │  ├─ 1760500000_crew_schema.js         Collections + API-Rules
 │  ├─ 1760500001_crew_seed_channels.js  team, peam, beam
 │  ├─ 1760500002_crew_settings.js       Rate-Limits, Trusted Proxy, App-Name
-│  └─ 1760500003_crew_admin_users.js    Benutzerverwaltung für Admins
+│  ├─ 1760500003_crew_admin_users.js    Benutzerverwaltung für Admins
+│  └─ 1760500004_crew_damages_orders.js Autoschaden + Bestellen
 ├─ pb_hooks/crew.pb.js      Default-Rolle, Sperre beendet Sitzungen, Text trimmen
 ├─ pb_public/
 │  ├─ index.html
@@ -69,6 +70,9 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
 │  │  ├─ shell.js           Sidebar, Off-Canvas-Menü
 │  │  ├─ settings.js        Einstellungen (Profil, Passwort, Darstellung, Chat)
 │  │  ├─ users.js           Benutzerverwaltung für Admins
+│  │  ├─ damages.js         Autoschaden
+│  │  ├─ orders.js          Bestellen
+│  │  ├─ forms.js           gemeinsame Formular-Bausteine
 │  │  ├─ prefs.js           Geräte-Einstellungen (Theme, Enter, Benachrichtigungen)
 │  │  ├─ theme.js           setzt das Farbschema vor dem ersten Rendern
 │  │  ├─ channels.js        Kanäle, Lesestatus, Ungelesen-Punkte
@@ -82,6 +86,33 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
    ├─ create-user.mjs       Teammitglied anlegen/aktualisieren (CLI)
    └─ check-rules.mjs       prüft API-Rules per REST und Realtime
 ```
+
+---
+
+## Autoschaden und Bestellen
+
+Unter den Kanälen stehen in der Sidebar zwei weitere Bereiche:
+
+**Autoschaden** (`/autoschaden`)
+- Schaden melden: **Kennzeichen** und **Beschreibung**. Das Kennzeichen wird einheitlich
+  großgeschrieben gespeichert („b-ab 123“ → „B-AB 123“).
+- **Nutzer sehen nur ihre eigenen Meldungen, Admins sehen alle** (mit Namen der meldenden Person).
+- **Als behoben markieren** bzw. **Wieder öffnen** können die meldende Person und Admins.
+  Wer und wann, trägt der Server ein („Behoben von … · Heute, 14:32“).
+- Kennzeichen und Beschreibung sind nach dem Melden nicht mehr änderbar. Löschen können
+  die meldende Person und Admins.
+- Filter: Offen / Behoben / Alle.
+
+**Bestellen** (`/bestellen`)
+- Standort **Büro 1, Büro 2 oder Büro 3** wählen (die letzte Wahl wird gemerkt), dazu
+  Artikel, Menge und optional eine Notiz.
+- **Alle sehen alle Bestellungen.**
+- Nur **Admins** markieren eine Bestellung als **erledigt** (oder öffnen sie wieder) und
+  können Bestellungen löschen. Eigene offene Bestellungen kann man **zurückziehen**.
+- Filter nach Status (Offen / Erledigt / Alle) und Standort.
+
+Beide Listen aktualisieren sich live, wenn jemand anderes etwas ändert. Angezeigt werden
+jeweils die neuesten 200 Einträge.
 
 ---
 
@@ -330,6 +361,8 @@ lassen sich verschlüsselte Einstellungen nicht mehr lesen.
 | `channels` | `slug` (unique, nur `team`/`peam`/`beam`), `title`, `description`, `position` |
 | `messages` | `channel` → channels (Pflicht, kein Cascade), `author` → users (Pflicht), `body` (1–4000), `created`, `updated`; Index `(channel, created)` |
 | `channel_reads` | `user` → users, `channel` → channels, `last_read` (Datum); Unique-Index `(user, channel)` |
+| `damages` | `reporter` → users, `plate` (max. 20), `description` (max. 2000), `fixed`, `fixed_at`, `fixed_by` → users |
+| `orders` | `requester` → users, `location` (`Büro 1`/`Büro 2`/`Büro 3`), `item` (max. 200), `quantity` (1–9999), `note` (max. 1000), `done`, `done_at`, `done_by` → users |
 
 `null` heißt „nur Superuser“. Ein leerer String würde jeden zulassen und kommt nirgends vor.
 
@@ -338,6 +371,8 @@ lassen sich verschlüsselte Einstellungen nicht mehr lesen.
 | users | `@request.auth.id != ""` | `@request.auth.role = "admin"` | `(id = @request.auth.id && @request.body.role:isset = false && @request.body.blocked:isset = false && @request.body.emailVisibility:isset = false) \|\| (@request.auth.role = "admin" && id != @request.auth.id)` | `null` |
 | channels | `@request.auth.id != ""` | `null` | `null` | `null` |
 | messages | `@request.auth.id != ""` | `@request.auth.id != "" && @request.body.author = @request.auth.id` | `author = @request.auth.id && @request.body.author:isset = false && @request.body.channel:isset = false` | `author = @request.auth.id \|\| @request.auth.role = "admin"` |
+| damages | `reporter = @request.auth.id \|\| @request.auth.role = "admin"` | `@request.auth.id != "" && @request.body.reporter = @request.auth.id` | Melder oder Admin, **nur** `fixed` (alle anderen Felder `:isset = false`) | Melder oder Admin |
+| orders | `@request.auth.id != ""` | `@request.auth.id != "" && @request.body.requester = @request.auth.id` | nur Admin, **nur** `done` | eigene offene (`requester = @request.auth.id && done = false`) oder Admin |
 | channel_reads | `user = @request.auth.id` | `@request.auth.id != "" && @request.body.user = @request.auth.id` | `user = @request.auth.id && @request.body.user:isset = false && @request.body.channel:isset = false` | `user = @request.auth.id` |
 
 Zusätzlich gilt für `users`: `authRule = blocked = false` und

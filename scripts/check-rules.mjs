@@ -284,6 +284,84 @@ async function main() {
     });
     ok(rUpd.status === 404 || rUpd.status === 403, `B kann A's Lesestatus nicht ändern (${rUpd.status})`);
 
+    // --- Autoschaden
+    const dmg = await api("POST", "/api/collections/damages/records", {
+      token: ta, body: { reporter: A.id, plate: "  b-ab   123 ", description: "Delle hinten links", fixed: true },
+    });
+    ok(dmg.status === 200 && dmg.data.plate === "B-AB 123" && dmg.data.fixed === false,
+      "Schaden melden: Kennzeichen vereinheitlicht, Status offen erzwungen");
+    const dmgSpoof = await api("POST", "/api/collections/damages/records", {
+      token: ta, body: { reporter: B.id, plate: "X 1", description: "x" },
+    });
+    ok(dmgSpoof.status >= 400, `Schaden nicht im Namen anderer melden (${dmgSpoof.status})`);
+    const dmgGuest = await api("GET", "/api/collections/damages/records");
+    ok(dmgGuest.data?.totalItems === 0 || dmgGuest.status >= 400, "Gast sieht keine Schäden");
+    const dmgB = await api("GET", "/api/collections/damages/records", { token: tb });
+    ok(dmgB.data.items.every((d) => d.reporter === B.id), "Nutzer sieht nur eigene Schäden");
+    const dmgC = await api("GET", `/api/collections/damages/records/${dmg.data.id}`, { token: tc });
+    ok(dmgC.status === 200, "Admin sieht alle Schäden");
+    const dmgBFix = await api("PATCH", `/api/collections/damages/records/${dmg.data.id}`, {
+      token: tb, body: { fixed: true },
+    });
+    ok(dmgBFix.status === 404 || dmgBFix.status === 403, `fremder Nutzer kann nicht „behoben“ setzen (${dmgBFix.status})`);
+    const dmgAFix = await api("PATCH", `/api/collections/damages/records/${dmg.data.id}`, {
+      token: ta, body: { fixed: true },
+    });
+    ok(dmgAFix.status === 200 && dmgAFix.data.fixed && dmgAFix.data.fixed_by === A.id && dmgAFix.data.fixed_at,
+      "Melder setzt „behoben“ (Zeit + Person vom Server)");
+    const dmgCOpen = await api("PATCH", `/api/collections/damages/records/${dmg.data.id}`, {
+      token: tc, body: { fixed: false },
+    });
+    ok(dmgCOpen.status === 200 && !dmgCOpen.data.fixed && !dmgCOpen.data.fixed_by, "Admin öffnet Schaden wieder");
+    const dmgEdit = await api("PATCH", `/api/collections/damages/records/${dmg.data.id}`, {
+      token: ta, body: { plate: "Z 9" },
+    });
+    ok(dmgEdit.status >= 400, `Kennzeichen nachträglich nicht änderbar (${dmgEdit.status})`);
+    const dmgFake = await api("PATCH", `/api/collections/damages/records/${dmg.data.id}`, {
+      token: ta, body: { fixed: true, fixed_by: B.id },
+    });
+    ok(dmgFake.status >= 400, `„behoben von“ nicht fälschbar (${dmgFake.status})`);
+
+    // --- Bestellen
+    const ord = await api("POST", "/api/collections/orders/records", {
+      token: ta, body: { requester: A.id, location: "Büro 2", item: " Druckerpapier ", quantity: 3, done: true },
+    });
+    ok(ord.status === 200 && ord.data.item === "Druckerpapier" && ord.data.done === false,
+      "Bestellung anlegen: Status offen erzwungen");
+    const ordBad = await api("POST", "/api/collections/orders/records", {
+      token: ta, body: { requester: A.id, location: "Büro 9", item: "x", quantity: 1 },
+    });
+    ok(ordBad.status === 400, "nur Büro 1–3 erlaubt");
+    const ordSpoof = await api("POST", "/api/collections/orders/records", {
+      token: ta, body: { requester: B.id, location: "Büro 1", item: "x", quantity: 1 },
+    });
+    ok(ordSpoof.status >= 400, `Bestellung nicht im Namen anderer (${ordSpoof.status})`);
+    const ordGuest = await api("GET", "/api/collections/orders/records");
+    ok(ordGuest.data?.totalItems === 0 || ordGuest.status >= 400, "Gast sieht keine Bestellungen");
+    const ordB = await api("GET", `/api/collections/orders/records/${ord.data.id}`, { token: tb });
+    ok(ordB.status === 200, "alle Nutzer sehen alle Bestellungen");
+    const ordADone = await api("PATCH", `/api/collections/orders/records/${ord.data.id}`, {
+      token: ta, body: { done: true },
+    });
+    ok(ordADone.status >= 400, `Mitglied kann nicht „erledigt“ setzen (${ordADone.status})`);
+    const ordBDel = await api("DELETE", `/api/collections/orders/records/${ord.data.id}`, { token: tb });
+    ok(ordBDel.status >= 400, `fremde Bestellung nicht löschbar (${ordBDel.status})`);
+    const ordCDone = await api("PATCH", `/api/collections/orders/records/${ord.data.id}`, {
+      token: tc, body: { done: true },
+    });
+    ok(ordCDone.status === 200 && ordCDone.data.done && ordCDone.data.done_by === C.id, "Admin setzt „erledigt“");
+    const ordADel = await api("DELETE", `/api/collections/orders/records/${ord.data.id}`, { token: ta });
+    ok(ordADel.status >= 400, `erledigte Bestellung nicht mehr zurückziehbar (${ordADel.status})`);
+    const ordCEdit = await api("PATCH", `/api/collections/orders/records/${ord.data.id}`, {
+      token: tc, body: { item: "anders" },
+    });
+    ok(ordCEdit.status >= 400, `Artikel nachträglich nicht änderbar (${ordCEdit.status})`);
+    const ord2 = await api("POST", "/api/collections/orders/records", {
+      token: ta, body: { requester: A.id, location: "Büro 1", item: "Kaffee", quantity: 1 },
+    });
+    const ord2Del = await api("DELETE", `/api/collections/orders/records/${ord2.data.id}`, { token: ta });
+    ok(ord2Del.status === 204, "eigene offene Bestellung zurückziehen");
+
     // --- Benutzerverwaltung durch Admins
     const memberCreate = await api("POST", "/api/collections/users/records", {
       token: ta,
@@ -356,6 +434,14 @@ async function main() {
         { token: suToken });
       for (const m of msgs.data?.items || []) {
         await api("DELETE", `/api/collections/messages/records/${m.id}`, { token: suToken });
+      }
+      for (const [col, field] of [["damages", "reporter"], ["orders", "requester"]]) {
+        const list = await api("GET",
+          `/api/collections/${col}/records?perPage=200&filter=${encodeURIComponent(`${field}="${u.id}"`)}`,
+          { token: suToken });
+        for (const r of list.data?.items || []) {
+          await api("DELETE", `/api/collections/${col}/records/${r.id}`, { token: suToken });
+        }
       }
       await api("DELETE", `/api/collections/users/records/${u.id}`, { token: suToken });
     }

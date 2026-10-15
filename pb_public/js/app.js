@@ -13,6 +13,8 @@ import { createShell } from "./shell.js";
 import { openChannel } from "./messages.js";
 import { openSettings } from "./settings.js";
 import { openUsers } from "./users.js";
+import { openDamages } from "./damages.js";
+import { openOrders } from "./orders.js";
 import "./prefs.js";
 import { startRealtime, stopRealtime, onReconnect } from "./realtime.js";
 import {
@@ -208,6 +210,29 @@ async function showUsers(token) {
   view = openUsers({ container: s.main, menuButton: s.menuButton(), onAuthError: handleExpired });
 }
 
+/** Seite im Hauptbereich (Autoschaden, Bestellen) – gleicher Ablauf wie Einstellungen. */
+async function showArea(token, key, open) {
+  let s;
+  try {
+    s = await ensureShell();
+  } catch (err) {
+    if (token !== routeToken) return;
+    if (statusOf(err) === 401) return handleExpired();
+    await teardown();
+    return showStatus({
+      title: "Etwas ist schiefgelaufen.",
+      text: "Die Seite konnte nicht geladen werden. Prüf deine Verbindung und versuch es erneut.",
+    });
+  }
+  if (token !== routeToken) return;
+  await view?.destroy();
+  if (token !== routeToken) return;
+
+  setActiveChannel(null);
+  s.setActive(key);
+  view = open({ container: s.main, menuButton: s.menuButton(), onAuthError: handleExpired });
+}
+
 // --------------------------------------------------------------- Routing
 
 async function route(path) {
@@ -233,6 +258,14 @@ async function route(path) {
 
   if (path === "/users") {
     return showUsers(token);
+  }
+
+  if (path === "/autoschaden") {
+    return showArea(token, "damages", openDamages);
+  }
+
+  if (path === "/bestellen") {
+    return showArea(token, "orders", openOrders);
   }
 
   const match = path.match(/^\/channels\/([^/]+)$/);
