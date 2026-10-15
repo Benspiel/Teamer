@@ -1,0 +1,7 @@
+.git
+.env
+pb_data
+scripts
+*.md
+docker-compose*.yml
+Caddyfile

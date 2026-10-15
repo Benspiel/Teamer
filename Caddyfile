@@ -1,0 +1,56 @@
+# Crew – Reverse Proxy mit automatischem HTTPS und Security-Headern.
+#
+# DOMAIN            z. B. crew.example.com (für lokale Tests: localhost)
+# ACME_EMAIL        Kontakt für Let's Encrypt
+# ADMIN_ALLOWED_IPS IPs/Netze, die das Dashboard /_/ erreichen dürfen
+#                   (Standard: private_ranges = nur LAN/VPN)
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# --- Dashboard nur aus erlaubten Netzen ------------------------------
+	@dashboard path /_ /_/*
+	@dashboardBlocked {
+		path /_ /_/*
+		not remote_ip {$ADMIN_ALLOWED_IPS:private_ranges}
+	}
+	respond @dashboardBlocked "Not found" 404
+
+	# --- Security-Header für alle Antworten -------------------------------
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		Cross-Origin-Opener-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		-Server
+		-X-Powered-By
+		defer
+	}
+
+	# --- Strikte CSP für die App (kein unsafe-inline, kein unsafe-eval) ---
+	@app not path /_ /_/*
+	header @app {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		defer
+	}
+
+	# Das PocketBase-Dashboard bringt eigene Inline-Styles mit; hier nur Framing verbieten.
+	header @dashboard {
+		Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+		defer
+	}
+
+	# Statische App-Dateien kurz cachen, API nie.
+	@static path /css/* /js/* /fonts/* /favicon.svg
+	header @static Cache-Control "public, max-age=3600"
+
+	reverse_proxy pocketbase:8090 {
+		# Realtime (SSE) sofort durchreichen.
+		flush_interval -1
+	}
+}

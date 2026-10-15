@@ -1,0 +1,58 @@
+# Crew – PocketBase + Caddy
+#
+#   cp .env.example .env   # Werte anpassen
+#   docker compose up -d --build
+
+name: crew
+
+services:
+  pocketbase:
+    build:
+      context: .
+      args:
+        PB_VERSION: "0.40.5"
+    image: crew-pocketbase:0.40.5
+    restart: unless-stopped
+    environment:
+      APP_URL: "https://${DOMAIN:?DOMAIN in .env setzen}"
+      PB_SUPERUSER_EMAIL: "${PB_SUPERUSER_EMAIL:-}"
+      PB_SUPERUSER_PASSWORD: "${PB_SUPERUSER_PASSWORD:-}"
+      PB_ENCRYPTION_KEY: "${PB_ENCRYPTION_KEY:-}"
+    volumes:
+      - pb_data:/pb/pb_data
+    # Nicht öffentlich: nur auf dem Host erreichbar (z. B. Dashboard per SSH-Tunnel).
+    ports:
+      - "127.0.0.1:${PB_LOCAL_PORT:-8090}:8090"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  caddy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+    environment:
+      DOMAIN: "${DOMAIN}"
+      ACME_EMAIL: "${ACME_EMAIL:?ACME_EMAIL in .env setzen}"
+      ADMIN_ALLOWED_IPS: "${ADMIN_ALLOWED_IPS:-private_ranges}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  pb_data:
+  caddy_data:
+  caddy_config:

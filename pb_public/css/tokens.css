@@ -1,0 +1,131 @@
+/*
+ * Crew – Design-Tokens (Mobbin-Stil).
+ * Nur Variablen. Komponenten stehen in app.css und verwenden ausschließlich diese Tokens.
+ */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2-variations"),
+       url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations"),
+       url("/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* ---------------------------------------------------------------- Farben */
+  --ink: #141414;
+  --ink-soft: #262626;
+  --on-ink: #ffffff;
+  --canvas: #ffffff;
+  --canvas-soft: #f3f3f3;
+  --field: #f0f0f0;
+  --hairline-soft: #f0f0f0;
+  --hairline: #e0e0e0;
+  --text-muted: #707070;
+  --text-faint: #adadad;
+  --accent: #0066ff; /* einziger Farbakzent – nur Ungelesen-Punkt */
+  --scrim: rgb(20 20 20 / 0.32); /* Ink, transparent – Off-Canvas-Hintergrund */
+
+  /* ------------------------------------------------------------ Typografie */
+  --font-sans: "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+  --weight-light: 300;
+  --weight-text: 450;
+  --weight-strong: 600;
+  --weight-heading: 650;
+
+  --text-h3: 32px;      --leading-h3: 1.13;
+  --text-h4: 24px;      --leading-h4: 1.25;
+  --text-title: 20px;   --leading-title: 1.3;
+  --text-body-lg: 20px; --leading-body-lg: 1.38;
+  --text-body: 16px;    --leading-body: 1.38;
+  --text-body-sm: 14px; --leading-body-sm: 1.43;
+  --text-label: 12px;   --leading-label: 1.33;
+  --text-caption: 12px; --leading-caption: 1.33;
+  --leading-tight: 1;
+
+  /* ---------------------------------------------------------------- Radien */
+  --r-sm: 16px;
+  --r-md: 24px;
+  --r-full: 9999px;
+
+  /* ------------------------------------------------------------- Abstände */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-section: 80px;
+  --space-section-lg: 120px;
+
+  /* --------------------------------------------------------------- Größen */
+  --hairline-width: 1px;
+  --ring-width: 2px;
+  --ring-offset: 2px;
+
+  --control-h: 44px;       /* Buttons, Touch-Ziele */
+  --nav-item-h: 40px;      /* Kanal-Pillen */
+  --send-size: 40px;       /* runder Senden-Button */
+  --action-size: 32px;     /* Nachrichten-Aktionen (Maus) */
+  --icon-size: 20px;
+  --icon-size-sm: 16px;
+  --icon-stroke: 1.75;
+  --dot-size: 8px;
+
+  --avatar-size: 36px;
+  --avatar-size-sm: 32px;
+
+  --sidebar-w: 264px;
+  --sidebar-w-md: 220px;
+  --sidebar-w-mobile: 288px;
+  --content-max: 860px;
+  --card-max: 420px;
+  --status-max: 480px;
+
+  --composer-max-h: 200px;
+  --edit-min-h: 80px;
+  --min-width: 320px;
+
+  /* ------------------------------------------------------------- Bewegung */
+  --dur-fast: 120ms;
+  --dur-base: 150ms;
+  --dur-slow: 180ms;
+  --ease: ease-out;
+
+  --opacity-disabled: 0.4;
+  --opacity-hover-soft: 0.6;
+
+  /* ---------------------------------------------------------------- Ebenen */
+  --z-header: 10;
+  --z-scrim: 40;
+  --z-drawer: 50;
+  --z-toast: 100;
+  --z-skip: 200;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
