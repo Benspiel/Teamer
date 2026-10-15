@@ -1,4 +1,4 @@
-# Crew.
+# Teamer.
 
 Ein schlichter Team-Chat mit genau drei Kanälen – **team**, **peam** und **beam** – auf
 [PocketBase](https://pocketbase.io). Ein Go-Binary mit SQLite liefert Auth, REST-API,
