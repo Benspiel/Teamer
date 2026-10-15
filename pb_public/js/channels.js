@@ -9,6 +9,34 @@
 
 import { pb, me } from "./pb.js";
 import { subscribeMessages } from "./realtime.js";
+import { getPrefs } from "./prefs.js";
+import { navigate } from "./router.js";
+
+const NOTIFY_MAX = 140;
+
+/** Desktop-Benachrichtigung, wenn eingeschaltet und die Nachricht gerade nicht sichtbar ist. */
+function notify(rec) {
+  if (!getPrefs().notify || !("Notification" in window) || Notification.permission !== "granted") return;
+  if (rec.channel === activeChannelId && document.visibilityState === "visible") return;
+  const channel = channels.find((c) => c.id === rec.channel);
+  if (!channel) return;
+  const author = rec.expand?.author?.name || "Jemand";
+  const body = String(rec.body || "");
+  try {
+    const n = new Notification(`#${channel.slug} · ${author}`, {
+      body: body.length > NOTIFY_MAX ? `${body.slice(0, NOTIFY_MAX)} …` : body,
+      tag: rec.id,
+      icon: "/favicon.svg",
+    });
+    n.onclick = () => {
+      window.focus();
+      navigate(`/channels/${channel.slug}`);
+      n.close();
+    };
+  } catch (_) {
+    // z. B. mobile Browser ohne Notification-Konstruktor
+  }
+}
 
 let channels = [];
 const reads = new Map(); // channelId -> { id, last_read }
@@ -120,6 +148,7 @@ export async function startUnreadTracking() {
     const rec = event.record;
     if (!user || !rec) return;
     if (event.action === "create") {
+      if (rec.author !== user.id) notify(rec);
       if (rec.channel !== activeChannelId && rec.author !== user.id && !unread.has(rec.channel)) {
         unread.add(rec.channel);
         emit();
@@ -131,7 +160,7 @@ export async function startUnreadTracking() {
         if (!has && unread.delete(channel.id)) emit();
       }).catch(() => {});
     }
-  }, { fields: "id,channel,author,created" });
+  }, { fields: "id,channel,author,created,body,expand.author.name", expand: "author" });
 }
 
 export async function stopUnreadTracking() {

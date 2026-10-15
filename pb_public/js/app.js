@@ -5,12 +5,14 @@
  * API-Rules von PocketBase (siehe pb_migrations/).
  */
 
-import { pb, isAuthed, statusOf } from "./pb.js";
+import { pb, isAuthed, statusOf, session } from "./pb.js";
 import { startRouter, navigate } from "./router.js";
 import { renderLogin, refreshSession, logout } from "./auth.js";
 import { statusPage } from "./ui.js";
 import { createShell } from "./shell.js";
 import { openChannel } from "./messages.js";
+import { openSettings } from "./settings.js";
+import "./prefs.js";
 import { startRealtime, stopRealtime, onReconnect } from "./realtime.js";
 import {
   loadChannels, findChannel, getChannels, setActiveChannel, refreshUnread,
@@ -37,7 +39,7 @@ async function handleExpired() {
 // 401 von irgendeinem Request (oder 403 mit abgelaufenem Token) → neu anmelden.
 pb.afterSend = (response, data) => {
   const isLogin = response.url.includes("/auth-with-password");
-  if (!isLogin && pb.authStore.token) {
+  if (!isLogin && !session.renewing && pb.authStore.token) {
     if (response.status === 401 || (response.status === 403 && !pb.authStore.isValid)) {
       queueMicrotask(handleExpired);
     }
@@ -149,6 +151,37 @@ async function showChannel(slug, token) {
   if (!hadFocusInMain && !window.matchMedia("(pointer: coarse)").matches) view.focusComposer();
 }
 
+async function showSettings(token) {
+  let s;
+  try {
+    s = await ensureShell();
+  } catch (err) {
+    if (token !== routeToken) return;
+    if (statusOf(err) === 401) return handleExpired();
+    await teardown();
+    return showStatus({
+      title: "Etwas ist schiefgelaufen.",
+      text: "Die Einstellungen konnten nicht geladen werden. Prüf deine Verbindung und versuch es erneut.",
+    });
+  }
+  if (token !== routeToken) return;
+  await view?.destroy();
+  if (token !== routeToken) return;
+
+  setActiveChannel(null);
+  s.setActive("settings");
+  view = openSettings({
+    container: s.main,
+    menuButton: s.menuButton(),
+    onAuthError: handleExpired,
+    // Neues Token nach Passwortwechsel: Realtime mit neuer Berechtigung neu aufbauen.
+    onSessionRenewed: async () => {
+      await teardown();
+      navigate("/settings", { replace: true });
+    },
+  });
+}
+
 // --------------------------------------------------------------- Routing
 
 async function route(path) {
@@ -166,6 +199,10 @@ async function route(path) {
 
   if (path === "/" || path === "/channels") {
     return navigate(`/channels/${DEFAULT_CHANNEL}`, { replace: true });
+  }
+
+  if (path === "/settings") {
+    return showSettings(token);
   }
 
   const match = path.match(/^\/channels\/([^/]+)$/);

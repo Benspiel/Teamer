@@ -6,6 +6,9 @@ export const pb = new PocketBase(window.location.origin);
 // Parallele Requests (z. B. Ungelesen-Zähler für alle Kanäle) nicht gegenseitig abbrechen.
 pb.autoCancellation(false);
 
+/** Laufender Passwortwechsel: altes Token wird kurz ungültig, kein Auto-Logout. */
+export const session = { renewing: false };
+
 /** Aktuell angemeldeter User (oder null). */
 export function me() {
   return pb.authStore.isValid ? pb.authStore.record : null;

@@ -93,6 +93,11 @@
 
   --avatar-size: 36px;
   --avatar-size-sm: 32px;
+  --avatar-size-lg: 72px;
+
+  --switch-w: 44px;
+  --switch-h: 26px;
+  --switch-knob: 20px;
 
   --sidebar-w: 264px;
   --sidebar-w-md: 220px;
@@ -100,6 +105,7 @@
   --content-max: 860px;
   --card-max: 420px;
   --status-max: 480px;
+  --settings-max: 640px;
 
   --composer-max-h: 200px;
   --edit-min-h: 80px;
@@ -120,6 +126,39 @@
   --z-drawer: 50;
   --z-toast: 100;
   --z-skip: 200;
+}
+
+/* Dark Mode: reine Inversion. Standard bleibt hell. */
+:root[data-theme="dark"] {
+  --ink: #ffffff;
+  --ink-soft: #e6e6e6;
+  --on-ink: #141414;
+  --canvas: #141414;
+  --canvas-soft: #1e1e1e;
+  --field: #262626;
+  --hairline-soft: #262626;
+  --hairline: #333333;
+  --text-muted: #a0a0a0;
+  --text-faint: #6b6b6b;
+  --scrim: rgb(0 0 0 / 0.56);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --ink: #ffffff;
+    --ink-soft: #e6e6e6;
+    --on-ink: #141414;
+    --canvas: #141414;
+    --canvas-soft: #1e1e1e;
+    --field: #262626;
+    --hairline-soft: #262626;
+    --hairline: #333333;
+    --text-muted: #a0a0a0;
+    --text-faint: #6b6b6b;
+    --scrim: rgb(0 0 0 / 0.56);
+    color-scheme: dark;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

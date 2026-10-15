@@ -65,7 +65,10 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
 │  │  ├─ app.js             Einstieg, Routing-Entscheidungen, Auth-Guard
 │  │  ├─ router.js          History-API-Router
 │  │  ├─ auth.js            Login-Seite, Session prüfen, Abmelden
-│  │  ├─ shell.js           Sidebar, Off-Canvas-Menü, Profilbild
+│  │  ├─ shell.js           Sidebar, Off-Canvas-Menü
+│  │  ├─ settings.js        Einstellungen (Profil, Passwort, Darstellung, Chat)
+│  │  ├─ prefs.js           Geräte-Einstellungen (Theme, Enter, Benachrichtigungen)
+│  │  ├─ theme.js           setzt das Farbschema vor dem ersten Rendern
 │  │  ├─ channels.js        Kanäle, Lesestatus, Ungelesen-Punkte
 │  │  ├─ messages.js        Nachrichtenliste, Composer, Bearbeiten/Löschen
 │  │  ├─ realtime.js        SSE-Verbindung, Reconnect, Statuszeile
@@ -77,6 +80,26 @@ statische Dateien, die PocketBase direkt ausliefert. Saubere URLs wie `/login` u
    ├─ create-user.mjs       Teammitglied anlegen/aktualisieren (CLI)
    └─ check-rules.mjs       prüft API-Rules per REST und Realtime
 ```
+
+---
+
+## Einstellungen für Nutzer
+
+Ein Klick auf den eigenen Avatar bzw. Namen unten in der Sidebar öffnet `/settings`:
+
+| Bereich | Inhalt | Gespeichert |
+|---|---|---|
+| **Profil** | Profilbild hochladen/entfernen (JPG, PNG, WebP, GIF, max. 2 MB), Name ändern, E-Mail und Rolle ansehen | PocketBase |
+| **Passwort** | aktuelles Passwort + neues Passwort (min. 10 Zeichen) zweimal. Danach bleibt man auf diesem Gerät angemeldet, alle anderen Geräte werden abgemeldet. | PocketBase |
+| **Darstellung** | Farbschema Hell / Dunkel / System (Dark Mode als reine Inversion) | dieses Gerät |
+| **Chat** | „Enter sendet die Nachricht“ (aus: Strg/⌘ + Enter sendet), Desktop-Benachrichtigungen | dieses Gerät |
+| **Sitzung** | Abmelden | – |
+
+Unten steht „Made by Rootex“ und die Version.
+
+Desktop-Benachrichtigungen erscheinen, solange Crew in einem Tab offen ist (im Hintergrund
+oder in einem anderen Kanal). Echte Push-Nachrichten bei geschlossenem Browser gibt es
+nicht. E-Mail und Rolle kann nur ein Admin im Dashboard ändern.
 
 ---
 
@@ -402,9 +425,8 @@ Geprüft werden unter anderem:
 - **Relative Zeit:** „gerade eben“, „vor 5 Min.“, „vor 2 Std.“. Ältere Nachrichten zeigen die
   Uhrzeit, weil der Tag schon im Datumstrenner steht. Das genaue Datum steht im Tooltip.
 - **Löschen** fragt inline nach („Löschen? Abbrechen / Löschen“) statt mit einem Dialog.
-- **Dark Mode** ist nicht umgesetzt (optional; Standard bleibt hell).
-- **Profilbild-Upload** (optional) ist umgesetzt: Klick auf den eigenen Avatar unten in der
-  Sidebar.
+- **Dark Mode** ist umgesetzt, aber Standard bleibt hell. Umschalten in den Einstellungen.
+- **Profilbild-Upload** (optional) ist umgesetzt, in den Einstellungen.
 - **Ältere Nachrichten** werden per Cursor (`created <` älteste geladene) statt per
   Seitennummer geladen. So verrutscht nichts, wenn währenddessen neue Nachrichten kommen.
   Das Nachladen startet automatisch beim Hochscrollen, der Button „Ältere laden“ bleibt als

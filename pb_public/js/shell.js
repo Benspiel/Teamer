@@ -3,14 +3,12 @@
  * Auf schmalen Screens ist die Sidebar ein Off-Canvas-Menü.
  */
 
-import { pb, me, statusOf } from "./pb.js";
-import { h, icon, avatar, toast } from "./ui.js";
+import { pb, me } from "./pb.js";
+import { h, icon, avatar } from "./ui.js";
 import { getChannels, hasUnread, onUnreadChange } from "./channels.js";
 import { logout } from "./auth.js";
 
 const MOBILE = window.matchMedia("(max-width: 767px)");
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export function createShell() {
   const channelLinks = new Map(); // slug -> { link, dot }
@@ -56,57 +54,35 @@ export function createShell() {
   const root = h("div", { class: "shell" }, sidebar, scrim, main);
 
   // --------------------------------------------------------- Nutzerbereich
-  const fileInput = h("input", {
-    type: "file",
-    accept: AVATAR_TYPES.join(","),
-    hidden: true,
-    tabindex: "-1",
-  });
+  // Avatar + Name führen zu den Einstellungen (Profil, Passwort, Darstellung …).
+  let settingsLink = null;
 
   function renderUser() {
     const user = me();
     if (!user) return;
-    const avatarButton = h("button", {
-      class: "avatar-button",
-      type: "button",
-      title: "Profilbild ändern",
-      "aria-label": "Profilbild ändern",
-    }, avatar(user));
-    avatarButton.addEventListener("click", () => fileInput.click());
+    const current = settingsLink?.getAttribute("aria-current");
+    settingsLink = h("a", {
+      class: "sidebar__me",
+      href: "/settings",
+      "data-link": "",
+      title: "Einstellungen",
+      "aria-label": `Einstellungen, angemeldet als ${user.name || "Unbenannt"}`,
+    },
+      avatar(user),
+      h("span", { class: "sidebar__user-name" }, user.name || "Unbenannt"),
+      icon("settings", { small: true }),
+    );
+    if (current) settingsLink.setAttribute("aria-current", current);
+    settingsLink.addEventListener("click", () => closeNav({ restoreFocus: false }));
 
     const logoutButton = h("button", { class: "btn btn--soft btn--block", type: "button" }, "Abmelden");
     logoutButton.addEventListener("click", () => logout());
 
-    userArea.replaceChildren(
-      h("div", { class: "sidebar__me" },
-        avatarButton,
-        h("span", { class: "sidebar__user-name", title: user.name }, user.name || "Unbenannt"),
-      ),
-      logoutButton,
-      fileInput,
-    );
+    userArea.replaceChildren(settingsLink, logoutButton);
   }
 
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    fileInput.value = "";
-    const user = me();
-    if (!file || !user) return;
-    if (!AVATAR_TYPES.includes(file.type)) return toast("Bitte wähle ein JPG, PNG, WebP oder GIF.");
-    if (file.size > MAX_AVATAR_BYTES) return toast("Das Bild darf höchstens 2 MB groß sein.");
-    const button = userArea.querySelector(".avatar-button");
-    button?.setAttribute("aria-busy", "true");
-    try {
-      const data = new FormData();
-      data.append("avatar", file);
-      await pb.collection("users").update(user.id, data);
-      renderUser();
-      toast("Profilbild aktualisiert.");
-    } catch (err) {
-      button?.removeAttribute("aria-busy");
-      toast(statusOf(err) === 0 ? "Keine Verbindung. Bitte versuch es erneut." : "Das Bild konnte nicht gespeichert werden.");
-    }
-  });
+  // Name/Profilbild geändert (auch in einem anderen Tab) → Sidebar aktualisieren.
+  const offAuth = pb.authStore.onChange(() => renderUser());
 
   renderUser();
 
@@ -184,8 +160,13 @@ export function createShell() {
     return btn;
   }
 
+  /** slug eines Kanals oder "settings". */
   function setActive(slug) {
     activeSlug = slug;
+    if (settingsLink) {
+      if (slug === "settings") settingsLink.setAttribute("aria-current", "page");
+      else settingsLink.removeAttribute("aria-current");
+    }
     for (const [s, { link }] of channelLinks) {
       if (s === slug) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");
@@ -195,6 +176,7 @@ export function createShell() {
 
   function destroy() {
     offUnread();
+    offAuth();
     document.removeEventListener("keydown", onKeydown);
     MOBILE.removeEventListener("change", onMediaChange);
     root.remove();

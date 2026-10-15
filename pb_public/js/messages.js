@@ -12,6 +12,14 @@ import { h, icon, avatar, timeEl, fullDate, refreshTimes, dayLabel, dayKey, isSa
 import { subscribeMessages, onReconnect, onConnectionStatus } from "./realtime.js";
 import { markRead } from "./channels.js";
 import { verifySession } from "./auth.js";
+import { getPrefs } from "./prefs.js";
+
+/** Enter-Verhalten aus den Einstellungen: true, wenn diese Taste senden soll. */
+function isSendKey(event) {
+  if (event.key !== "Enter" || event.isComposing) return false;
+  if (getPrefs().enterToSend) return !event.shiftKey;
+  return event.ctrlKey || event.metaKey;
+}
 
 const PAGE_SIZE = 50;
 const MAX_LENGTH = 4000;
@@ -544,7 +552,7 @@ export function openChannel({ channel, container, menuButton, onAuthError }) {
 
   input.addEventListener("input", updateComposer);
   input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    if (isSendKey(event)) {
       event.preventDefault();
       send();
     }
@@ -569,7 +577,8 @@ export function openChannel({ channel, container, menuButton, onAuthError }) {
     const form = h("form", { class: "edit-form" },
       textarea,
       h("div", { class: "edit-form__row" },
-        h("span", { class: "edit-form__hint" }, "Enter speichert, Esc bricht ab."),
+        h("span", { class: "edit-form__hint" },
+          getPrefs().enterToSend ? "Enter speichert, Esc bricht ab." : "Strg + Enter speichert, Esc bricht ab."),
         cancel,
         save,
       ),
@@ -610,7 +619,7 @@ export function openChannel({ channel, container, menuButton, onAuthError }) {
         event.stopPropagation();
         stop();
         entry.li.querySelector(".action")?.focus();
-      } else if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      } else if (isSendKey(event)) {
         event.preventDefault();
         submit();
       }
